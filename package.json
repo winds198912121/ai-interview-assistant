@@ -1,0 +1,59 @@
+{
+  "name": "ai-interview-assistant",
+  "version": "1.0.0",
+  "description": "AI Interview & Meeting Assistant",
+  "type": "module",
+  "main": "./out/main/index.js",
+  "author": "AI Interview Team",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "package": "electron-vite build && electron-builder --mac --config",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^0.0.0",
+    "@ai-sdk/google": "^0.0.0",
+    "@ai-sdk/openai": "^0.0.0",
+    "@deepgram/sdk": "^3.9.0",
+    "@electron-toolkit/utils": "^4.0.0",
+    "ai": "^3.4.0",
+    "better-sqlite3": "^11.0.0",
+    "electron-log": "^5.4.3",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "electron-vite": "^3.0.0",
+    "postcss": "^8.4.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.5.0",
+    "vite": "^6.0.0"
+  },
+  "build": {
+    "appId": "com.aiinterview.assistant",
+    "productName": "AI Interview Assistant",
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    },
+    "files": [
+      "out/**/*",
+      "resources/**/*"
+    ]
+  }
+}

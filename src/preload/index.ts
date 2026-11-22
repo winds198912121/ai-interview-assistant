@@ -11,7 +11,9 @@ export interface ElectronAPI {
     minimize: () => Promise<void>
     close: () => Promise<void>
     toggle: () => Promise<void>
+    resize: (mode: 'full' | 'focus' | 'mini') => Promise<void>
   }
+  onSettingsChange: (callback: (key: string, value: string) => void) => () => void
   settings: {
     open: () => Promise<void>
     close: () => Promise<void>
@@ -41,7 +43,13 @@ const api: ElectronAPI = {
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),
     close: () => ipcRenderer.invoke('window:close'),
-    toggle: () => ipcRenderer.invoke('window:toggle')
+    toggle: () => ipcRenderer.invoke('window:toggle'),
+    resize: (mode) => ipcRenderer.invoke('window:resize', mode)
+  },
+  onSettingsChange: (callback: (key: string, value: string) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, key: string, value: string) => callback(key, value)
+    ipcRenderer.on('settings:changed', handler)
+    return () => ipcRenderer.removeListener('settings:changed', handler)
   },
   settings: {
     open: () => ipcRenderer.invoke('settings:open'),

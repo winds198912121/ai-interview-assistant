@@ -17,6 +17,8 @@ function createMainWindow(): void {
   mainWindow = new BrowserWindow({
     width: 760,
     height: 480,
+    minWidth: 320,
+    minHeight: 200,
     x: Math.round((screenWidth - 760) / 2),
     y: Math.round((screenHeight - 480) / 2),
     frame: false,
@@ -25,7 +27,7 @@ function createMainWindow(): void {
     minimizable: true,
     maximizable: false,
     alwaysOnTop: true,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#111827',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -107,6 +109,17 @@ function setupIpcHandlers(): void {
       mainWindow?.focus()
     }
   })
+  ipcMain.handle('window:resize', (_, mode: 'full' | 'focus' | 'mini') => {
+    if (!mainWindow) return
+    if (mode === 'focus') {
+      mainWindow.setSize(400, 480)
+    } else if (mode === 'mini') {
+      mainWindow.setSize(320, 200)
+    } else {
+      mainWindow.setSize(760, 480)
+    }
+    mainWindow.center()
+  })
 
   ipcMain.handle('settings:open', () => createSettingsWindow())
   ipcMain.handle('settings:close', () => settingsWindow?.close())
@@ -121,8 +134,15 @@ function setupIpcHandlers(): void {
   ipcMain.handle('db:getAIResponses', (_, sessionId) => db.getAIResponses(sessionId))
 
   ipcMain.handle('settings:get', (_, key) => db.getSetting(key))
-  ipcMain.handle('settings:set', (_, key, value) => db.setSetting(key, value))
+  ipcMain.handle('settings:set', (_, key, value) => {
+    db.setSetting(key, value)
+    mainWindow?.webContents.send('settings:changed', key, value)
+  })
   ipcMain.handle('settings:getAll', () => db.getAllSettings())
+
+  ipcMain.handle('settings:changed', (_, key: string, value: string) => {
+    log.info(`Setting changed: ${key} = ${value.substring(0, 10)}...`)
+  })
 
   ipcMain.handle('capture:getSources', async () => {
     const sources = await desktopCapturer.getSources({

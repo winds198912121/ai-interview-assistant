@@ -366,22 +366,35 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
 
         {activeTab === 'knowledge' && (
           <div className="space-y-6 max-w-xl">
-            <h3 className="text-sm font-medium text-slate-200 border-b border-white/10 pb-2">RAGナレッジベース</h3>
+            <h3 className="text-sm font-semibold border-b pb-2" style={{ color: 'var(--text-primary)', borderColor: 'var(--border)' }}>RAGナレッジベース</h3>
             
-            <div className="bg-slate-800/50 rounded-lg p-6 text-center border border-slate-700/50">
-              <p className="text-sm text-slate-400 mb-2">Pro機能</p>
-              <p className="text-xs text-slate-500 mb-4">
+            <div 
+              className="rounded-lg p-6 text-center border"
+              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}
+            >
+              <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>Pro機能</p>
+              <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
                 PDF/DOCXを読み込んでローカル埋め込み→文脈注入
               </p>
-              <span className="text-xs px-3 py-1 bg-amber-900/50 text-amber-400 rounded">
+              <span 
+                className="text-xs px-3 py-1 rounded"
+                style={{ backgroundColor: 'rgba(245,158,11,.15)', color: 'var(--yellow)' }}
+              >
                 ⭐ Premium で利用可能
               </span>
             </div>
 
-            <div className="border-2 border-dashed border-slate-700 rounded-lg p-8 text-center">
-              <p className="text-sm text-slate-400 mb-2">ドキュメントを追加</p>
-              <p className="text-xs text-slate-500 mb-4">PDF、DOCX、TXT ファイル対応</p>
-              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm text-white">
+            <div 
+              className="border-2 border-dashed rounded-lg p-8 text-center"
+              style={{ borderColor: 'var(--border)' }}
+            >
+              <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>ドキュメントを追加</p>
+              <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>PDF、DOCX、TXT ファイル対応</p>
+              <button 
+                className="px-4 py-2 rounded text-sm font-semibold cursor-not-allowed opacity-50"
+                style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+                disabled
+              >
                 ファイルを選択
               </button>
             </div>
@@ -390,17 +403,28 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
 
         {activeTab === 'license' && (
           <div className="space-y-6 max-w-xl">
-            <h3 className="text-sm font-medium text-slate-200 border-b border-white/10 pb-2">ライセンス / プラン</h3>
+            <h3 className="text-sm font-semibold border-b pb-2" style={{ color: 'var(--text-primary)', borderColor: 'var(--border)' }}>ライセンス / プラン</h3>
             
-            <div className="bg-gradient-to-r from-blue-900/30 to-slate-800/50 rounded-lg p-6 border border-blue-800/30">
+            <div 
+              className="rounded-lg p-6 border"
+              style={{ 
+                background: 'linear-gradient(to right, rgba(99,102,241,0.15), var(--bg-card))',
+                borderColor: 'rgba(99,102,241,.3)'
+              }}
+            >
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-sm font-medium text-blue-400">Free プラン</p>
-                  <p className="text-xs text-slate-400">現在おかれているプラン</p>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--accent)' }}>Free プラン</p>
+                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>現在おかれているプラン</p>
                 </div>
-                <span className="text-xs px-3 py-1 bg-blue-900/50 text-blue-300 rounded">アクティブ</span>
+                <span 
+                  className="text-xs px-3 py-1 rounded"
+                  style={{ backgroundColor: 'rgba(99,102,241,.15)', color: 'var(--accent)' }}
+                >
+                  アクティブ
+                </span>
               </div>
-              <ul className="text-xs text-slate-400 space-y-1">
+              <ul className="text-xs space-y-1" style={{ color: 'var(--text-secondary)' }}>
                 <li>✓ リアルタイム音声認識</li>
                 <li>✓ AI回答生成</li>
                 <li>✓ SQLite セッション保存</li>
@@ -411,14 +435,18 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
             </div>
 
             <div className="space-y-4">
-              <p className="text-sm text-slate-300">ライセンスキーを入力</p>
+              <p className="text-sm" style={{ color: 'var(--text-primary)' }}>ライセンスキーを入力</p>
               <div className="flex gap-2">
                 <input
                   type="text"
                   placeholder="XXXX-XXXX-XXXX-XXXX"
                   className="input-field flex-1"
                 />
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm text-white">
+                <button 
+                  className="px-4 py-2 rounded text-sm font-semibold cursor-not-allowed opacity-50"
+                  style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+                  disabled
+                >
                   適用
                 </button>
               </div>

@@ -3,14 +3,23 @@
 @tailwind utilities;
 
 :root {
-  --bg-primary: #0F172A;
-  --bg-secondary: #1E293B;
-  --accent-blue: #2563EB;
-  --text-primary: #F1F5F9;
-  --text-secondary: #94A3B8;
-  --success: #22C55E;
-  --warning: #F59E0B;
-  --error: #EF4444;
+  --bg-primary:    #111827;
+  --bg-panel:      #1F2937;
+  --bg-card:       #374151;
+  --bg-input:      #1F2937;
+  --border:        #374151;
+  --border-focus:  #6366F1;
+  --text-primary:  #F9FAFB;
+  --text-secondary:#9CA3AF;
+  --text-muted:    #6B7280;
+  --accent:        #6366F1;
+  --accent-hover:  #4F46E5;
+  --accent-light:  rgba(99,102,241,0.15);
+  --green:         #10B981;
+  --red:           #EF4444;
+  --yellow:        #F59E0B;
+  --orange:        #F97316;
+  --blue:          #3B82F6;
 }
 
 * {
@@ -26,7 +35,7 @@ html, body, #root {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -42,7 +51,8 @@ body {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -50,32 +60,96 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--text-secondary);
+  background: var(--border);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-primary);
+  background: var(--text-muted);
 }
 
 @layer components {
   .btn-primary {
-    @apply px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium transition-colors;
+    @apply px-4 py-1.5 text-sm font-semibold rounded transition-colors;
+    background: var(--accent);
+    color: #fff;
   }
+  .btn-primary:hover { background: var(--accent-hover); }
   
   .btn-secondary {
-    @apply px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-sm font-medium transition-colors;
+    @apply px-3 py-1.5 text-sm font-medium rounded transition-colors;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
   }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
   
   .btn-icon {
-    @apply p-2 hover:bg-slate-700 rounded transition-colors;
+    @apply px-2 py-1 text-xs rounded transition-colors;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
   }
+  .btn-icon:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
+  
+  .btn-ghost {
+    @apply px-2 py-1 text-xs rounded transition-colors;
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+  }
+  .btn-ghost:hover { background: var(--accent-light); color: var(--accent); }
   
   .input-field {
-    @apply w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-sm focus:outline-none focus:border-blue-500;
+    @apply w-full px-3 py-2 text-sm rounded;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    outline: none;
   }
+  .input-field:focus { border-color: var(--accent); }
   
   .panel {
-    @apply bg-slate-800 rounded-lg border border-slate-700;
+    @apply rounded-lg;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
   }
+  
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold;
+  }
+  .badge-green  { background: rgba(16,185,129,.15); color: var(--green); }
+  .badge-red    { background: rgba(239,68,68,.15);  color: var(--red);   }
+  .badge-yellow { background: rgba(245,158,11,.15); color: var(--yellow);}
+  .badge-orange { background: rgba(249,115,22,.15); color: var(--orange);}
+  .badge-blue   { background: rgba(59,130,246,.15); color: var(--blue);  }
+  
+  .live-dot {
+    @apply w-1.5 h-1.5 rounded-full;
+    background: var(--red);
+    animation: pulse 1.4s infinite;
+  }
+  
+  .waveform {
+    @apply flex items-end gap-0.5 h-3;
+  }
+  .waveform span {
+    @apply w-0.5 rounded-sm;
+    background: var(--accent);
+    animation: wave 0.8s ease-in-out infinite alternate;
+  }
+  
+  .mode-badge {
+    @apply text-xs px-2 py-0.5 rounded-full font-semibold;
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+}
+
+@keyframes pulse {
+  0%,100%{ opacity:1; } 50%{ opacity:.3; }
+}
+
+@keyframes wave {
+  0%  { height: 2px; } 100% { height: 12px; }
 }

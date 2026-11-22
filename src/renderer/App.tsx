@@ -20,9 +20,13 @@ export default function App() {
     window.location.hash = newView === 'main' ? '' : `/${newView}`
   }
 
+  const handleModeChange = (mode: 'full' | 'focus' | 'mini') => {
+    window.electron?.window.resize(mode)
+  }
+
   return (
-    <div className="h-full w-full bg-slate-900">
-      {view === 'main' && <MainOverlay onNavigate={handleNavigate} />}
+    <div className="h-full w-full" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {view === 'main' && <MainOverlay onNavigate={handleNavigate} onModeChange={handleModeChange} />}
       {view === 'settings' && <SettingsView onBack={() => handleNavigate('main')} />}
       {view === 'sessions' && <SessionList onBack={() => handleNavigate('main')} />}
     </div>

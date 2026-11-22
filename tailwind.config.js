@@ -4,12 +4,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        slate: {
-          900: '#0F172A',
-          800: '#1E293B',
-          700: '#334155',
-          600: '#475569'
-        }
+        primary:   '#111827',
+        panel:     '#1F2937',
+        card:      '#374151',
+        accent:    '#6366F1',
+        'accent-hover': '#4F46E5',
+        'accent-light':  'rgba(99,102,241,0.15)',
+        green:     '#10B981',
+        red:       '#EF4444',
+        yellow:    '#F59E0B',
+        orange:    '#F97316',
+        blue:      '#3B82F6'
       }
     }
   },

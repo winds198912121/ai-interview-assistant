@@ -50,7 +50,10 @@ const useAppStore = create<AppState>((set) => ({
 
 interface MainOverlayProps {
   onNavigate: (view: 'main' | 'settings' | 'sessions') => void
+  onModeChange?: (mode: 'full' | 'focus' | 'mini') => void
 }
+
+type DisplayMode = 'full' | 'focus' | 'mini'
 
 const MODES = [
   { id: 'general', label: 'General' },
@@ -61,14 +64,20 @@ const MODES = [
   { id: 'negotiation', label: 'Negotiation' }
 ]
 
-export default function MainOverlay({ onNavigate }: MainOverlayProps) {
+const MODE_LABELS: Record<DisplayMode, string> = {
+  full: 'フルモード',
+  focus: '集中モード',
+  mini: 'ミニモード'
+}
+
+export default function MainOverlay({ onNavigate, onModeChange }: MainOverlayProps) {
   const { transcripts, aiResponses, addTranscript, addAIResponse, updateAIResponse, clearAll, isRecording, setIsRecording } = useAppStore()
   const [inputText, setInputText] = useState('')
   const [mode, setMode] = useState('general')
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('full')
   const [apiKey, setApiKey] = useState('')
   const [selectedDevice, setSelectedDevice] = useState('')
   const [llmProvider, setLlmProvider] = useState<LLMProvider>('deepseek')
-  const [showShortcuts, setShowShortcuts] = useState(false)
   const transcriptRef = useRef<HTMLDivElement>(null)
   const aiResponseRef = useRef<HTMLDivElement>(null)
   const [apiKeyError, setApiKeyError] = useState('')
@@ -76,6 +85,19 @@ export default function MainOverlay({ onNavigate }: MainOverlayProps) {
 
   useEffect(() => {
     loadSettings()
+    
+    const unsubscribe = window.electron?.onSettingsChange((key, value) => {
+      console.log(`Setting changed: ${key} = ${value}`)
+      if (key === 'deepgram_api_key') {
+        setApiKey(value)
+      } else if (key === 'llm_provider') {
+        setLlmProvider(value as LLMProvider)
+      }
+    })
+    
+    return () => {
+      unsubscribe?.()
+    }
   }, [])
 
   const loadSettings = async () => {
@@ -163,15 +185,6 @@ export default function MainOverlay({ onNavigate }: MainOverlayProps) {
     }
   }
 
-  const handleStartRecording = async () => {
-    if (!apiKey) {
-      setApiKeyError('Deepgram API Keyを設定してください')
-      return
-    }
-    setApiKeyError('')
-    setIsRecording(true)
-  }
-
   const { startRecording, stopRecording, devices, refreshDevices, error: sttError } = useSTT({
     apiKey,
     language: 'ja-JP',
@@ -199,7 +212,12 @@ export default function MainOverlay({ onNavigate }: MainOverlayProps) {
   }, [aiResponses])
 
   const handleMinimize = () => window.electron?.window.minimize()
-  const handleClose = () => window.electron?.window.close()
+  const handleClose = () => window.electron?.window.hide()
+
+  const handleDisplayModeChange = (newMode: DisplayMode) => {
+    setDisplayMode(newMode)
+    onModeChange?.(newMode)
+  }
 
   const handleSend = async () => {
     if (!inputText.trim()) return
@@ -231,208 +249,247 @@ export default function MainOverlay({ onNavigate }: MainOverlayProps) {
     setIsRecording(true)
   }
 
+  const lastAIResponse = aiResponses[aiResponses.length - 1]
+
   return (
-    <div className="h-full flex flex-col bg-slate-900" style={{ backgroundColor: 'rgba(15, 23, 42, 0.97)' }}>
-      {/* Title Bar (44px) */}
-      <div className="h-11 bg-slate-800 border-b border-white/10 flex items-center justify-between px-4 drag-region">
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-slate-200">AI面接ヘルパー</span>
-          
-          {/* Mode Selection Pill */}
-          <div className="flex items-center bg-slate-700 rounded-lg p-0.5">
-            {MODES.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setMode(m.id)}
-                className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                  mode === m.id 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
+    <div 
+      className="h-full flex flex-col" 
+      style={{ backgroundColor: 'var(--bg-primary)' }}
+    >
+      {/* Title Bar */}
+      <div 
+        className="h-9 flex items-center justify-between px-3 drag-region border-b"
+        style={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border)' }}
+      >
+        <div className="flex items-center gap-3">
+          {/* Traffic lights */}
+          <div className="flex items-center gap-1.5 no-drag">
+            <button onClick={handleClose} className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600" title="閉じる" />
+            <button onClick={handleMinimize} className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600" title="最小化" />
+            <button className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-600" title="最大化" />
           </div>
+          <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>🎙 AI面接アシスタント</span>
         </div>
         
-        {/* Toolbar Buttons */}
-        <div className="flex items-center gap-1 no-drag">
-          <button 
-            onClick={() => onNavigate('sessions')} 
-            className="btn-icon text-slate-400 hover:text-white" 
-            title="履歴 (⌘+Shift+L)"
+        <div className="flex items-center gap-2 no-drag">
+          <span className="mode-badge">{MODE_LABELS[displayMode]}</span>
+          <select
+            value={displayMode}
+            onChange={(e) => handleDisplayModeChange(e.target.value as DisplayMode)}
+            className="text-xs px-2 py-0.5 rounded border-none outline-none cursor-pointer"
+            style={{ backgroundColor: 'var(--accent-light)', color: 'var(--accent)' }}
           >
-            📋
-          </button>
-          <button 
-            onClick={() => onNavigate('settings')} 
-            className="btn-icon text-slate-400 hover:text-white" 
-            title="設定 (⌘+,)"
-          >
+            <option value="full">フル</option>
+            <option value="focus">集中</option>
+            <option value="mini">ミニ</option>
+          </select>
+          <button onClick={() => onNavigate('settings')} className="text-xs px-2 py-0.5 rounded hover:bg-slate-700" style={{ color: 'var(--text-secondary)' }} title="設定 (⌘+,)">
             ⚙️
           </button>
-          <button onClick={handleMinimize} className="btn-icon text-slate-400 hover:text-white" title="最小化">
-            −
-          </button>
-          <button onClick={handleClose} className="btn-icon text-slate-400 hover:text-red-400" title="非表示 (⌘+Shift+H)">
+          <button onClick={handleClose} className="text-xs w-5 h-5 flex items-center justify-center rounded hover:bg-slate-700" style={{ color: 'var(--text-muted)' }} title="非表示">
             ×
           </button>
         </div>
       </div>
 
+      {/* Mode Tabs */}
+      <div 
+        className="flex items-center gap-1 px-3 py-2 border-b"
+        style={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border)' }}
+      >
+        {MODES.map((m) => (
+          <button
+            key={m.id}
+            onClick={() => setMode(m.id)}
+            className="px-3 py-1 text-xs rounded transition-colors"
+            style={{
+              backgroundColor: mode === m.id ? 'var(--accent)' : 'transparent',
+              color: mode === m.id ? '#fff' : 'var(--text-secondary)',
+              border: `1px solid ${mode === m.id ? 'var(--accent)' : 'var(--border)'}`
+            }}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Transcript Panel (Left 50%) */}
-        <div className="w-1/2 flex flex-col border-r border-white/10">
-          <div className="px-4 py-2 border-b border-white/10 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">リアルタイム文字起こし</span>
-              {isRecording && (
-                <span className="flex items-center gap-1.5 text-xs text-red-400">
-                  <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                  録音中
+      <div className="flex-1 flex overflow-hidden" style={{ height: displayMode === 'mini' ? '148px' : '420px' }}>
+        {/* Transcript Panel - Hidden in focus/mini mode */}
+        {displayMode === 'full' && (
+          <div 
+            className="w-1/2 flex flex-col border-r"
+            style={{ borderColor: 'var(--border)' }}
+          >
+            <div 
+              className="px-3 py-2 border-b flex items-center justify-between"
+              style={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border)' }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                  {isRecording && <span className="live-dot inline-block mr-1.5" />}
+                  ライブ文字起こし
                 </span>
-              )}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedDevice}
+                  onChange={(e) => setSelectedDevice(e.target.value)}
+                  className="text-xs px-2 py-1 rounded border outline-none cursor-pointer"
+                  style={{ backgroundColor: 'var(--bg-input)', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
+                >
+                  <option value="">デフォルトマイク</option>
+                  {devices.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>
+                      {d.label}
+                    </option>
+                  ))}
+                </select>
+                
+                {isRecording ? (
+                  <button 
+                    onClick={() => { stopRecording(); setIsRecording(false) }} 
+                    className="px-3 py-1 rounded text-xs font-semibold flex items-center gap-1.5"
+                    style={{ backgroundColor: 'var(--red)', color: '#fff' }}
+                  >
+                    <span className="w-2 h-2 bg-white rounded-sm" />
+                    停止
+                  </button>
+                ) : (
+                  <button 
+                    onClick={handleStart} 
+                    className="px-3 py-1 rounded text-xs font-semibold flex items-center gap-1.5"
+                    style={{ backgroundColor: 'var(--accent)', color: '#fff' }}
+                  >
+                    <span className="w-2 h-2 bg-white rounded-full" />
+                    録音
+                  </button>
+                )}
+              </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedDevice}
-                onChange={(e) => setSelectedDevice(e.target.value)}
-                className="bg-slate-700 text-xs px-2 py-1 rounded border-none outline-none text-slate-300"
-              >
-                <option value="">デフォルトマイク</option>
-                {devices.map((d) => (
-                  <option key={d.deviceId} value={d.deviceId}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-              
-              {isRecording ? (
-                <button 
-                  onClick={() => { stopRecording(); setIsRecording(false) }} 
-                  className="px-3 py-1 rounded text-xs bg-red-600 hover:bg-red-700 text-white flex items-center gap-1"
-                >
-                  <span className="w-2 h-2 bg-white rounded-sm" />
-                  停止
-                </button>
+            {apiKeyError && (
+              <div className="px-4 py-1.5 text-xs rounded mx-2 mt-2" style={{ backgroundColor: 'rgba(239,68,68,.15)', color: 'var(--red)' }}>
+                {apiKeyError}
+              </div>
+            )}
+            {sttError && (
+              <div className="px-4 py-1.5 text-xs rounded mx-2 mt-2" style={{ backgroundColor: 'rgba(239,68,68,.15)', color: 'var(--red)' }}>
+                {sttError.message}
+              </div>
+            )}
+            
+            <div ref={transcriptRef} className="flex-1 overflow-y-auto p-3 space-y-2">
+              {transcripts.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
+                  <div className="text-center">
+                    <p>文字起こしがここに表示されます</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>「録音」ボタンまたはグローバルショートカットでマイクON</p>
+                  </div>
+                </div>
               ) : (
-                <button 
-                  onClick={handleStart} 
-                  className="px-3 py-1 rounded text-xs bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1"
-                >
-                  <span className="w-2 h-2 bg-white rounded-full" />
-                  録音
-                </button>
+                transcripts.map((t) => (
+                  <div
+                    key={t.id}
+                    className="p-2.5 rounded-lg text-sm"
+                    style={{
+                      backgroundColor: t.speaker === 'user' ? 'rgba(59,130,246,.15)' : 'var(--bg-card)',
+                      border: `1px solid ${t.speaker === 'user' ? 'rgba(59,130,246,.3)' : 'var(--border)'}`,
+                      marginLeft: t.speaker === 'user' ? '16px' : '0',
+                      marginRight: t.speaker === 'user' ? '0' : '16px'
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-semibold" style={{ color: t.speaker === 'user' ? 'var(--blue)' : 'var(--accent)' }}>
+                        {t.speaker === 'user' ? 'あなた' : '面接官'}
+                      </span>
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {new Date(t.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p style={{ color: 'var(--text-primary)', lineHeight: 1.6 }}>{t.text}</p>
+                  </div>
+                ))
               )}
             </div>
           </div>
-          
-          {apiKeyError && (
-            <div className="px-4 py-1.5 bg-red-900/30 text-xs text-red-400 border-b border-red-900/50">
-              {apiKeyError}
-            </div>
-          )}
-          {sttError && (
-            <div className="px-4 py-1.5 bg-red-900/30 text-xs text-red-400 border-b border-red-900/50">
-              {sttError.message}
-            </div>
-          )}
-          
-          <div ref={transcriptRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-            {transcripts.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-slate-500 text-sm">
-                <div className="text-center">
-                  <p>文字起こしがここに表示されます</p>
-                  <p className="text-xs mt-1 text-slate-600">「録音」ボタンまたは ⌘+Shift+M でマイクON</p>
-                </div>
-              </div>
-            ) : (
-              transcripts.map((t) => (
-                <div
-                  key={t.id}
-                  className={`p-3 rounded-lg text-sm ${
-                    t.speaker === 'user' 
-                      ? 'bg-blue-900/20 ml-8 border border-blue-800/30' 
-                      : 'bg-slate-800/80 mr-8 border border-slate-700/50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className={`text-xs font-medium ${
-                      t.speaker === 'user' ? 'text-blue-400' : 'text-emerald-400'
-                    }`}>
-                      {t.speaker === 'user' ? 'あなた' : '面接官'}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {new Date(t.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  <p className="text-slate-200 leading-relaxed">{t.text}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        )}
 
-        {/* AI Suggestion Panel (Right 50%) */}
-        <div className="w-1/2 flex flex-col bg-slate-900/50">
-          <div className="px-4 py-2 border-b border-white/10">
-            <span className="text-xs text-slate-400">AI回答提案</span>
+        {/* AI Summary Panel */}
+        <div 
+          className="flex flex-col"
+          style={{ 
+            width: displayMode === 'full' ? '50%' : '100%',
+            backgroundColor: displayMode !== 'full' ? 'var(--bg-primary)' : 'transparent'
+          }}
+        >
+          <div 
+            className="px-3 py-2 border-b"
+            style={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border)' }}
+          >
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+              ✨ AIサマリー
+            </span>
           </div>
           
-          <div ref={aiResponseRef} className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div ref={aiResponseRef} className="flex-1 overflow-y-auto p-3 space-y-3">
             {aiResponses.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-slate-500 text-sm">
+              <div className="h-full flex items-center justify-center text-sm" style={{ color: 'var(--text-muted)' }}>
                 <div className="text-center">
                   <p>質問に対してAI回答が表示されます</p>
-                  <p className="text-xs mt-1 text-slate-600">テキスト入力または音声で質問してください</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>テキスト入力または音声で質問してください</p>
                 </div>
               </div>
             ) : (
               aiResponses.map((r) => (
                 <div key={r.id} className="space-y-2">
-                  <div className="bg-slate-800/80 p-3 rounded-lg border border-slate-700/50">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-xs text-slate-400">Q</span>
-                      <span className="text-xs text-slate-500">{new Date(r.timestamp).toLocaleTimeString('ja-JP')}</span>
+                  <div 
+                    className="p-2.5 rounded-lg text-sm"
+                    style={{ backgroundColor: 'var(--bg-card)', border: `1px solid ${'var(--border)'}` }}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Q</span>
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(r.timestamp).toLocaleTimeString('ja-JP')}</span>
                     </div>
-                    <p className="text-slate-200 text-sm">{r.question}</p>
+                    <p style={{ color: 'var(--text-primary)' }}>{r.question}</p>
                   </div>
                   
-                  <div className="bg-blue-900/20 p-3 rounded-lg border border-blue-800/30">
+                  <div 
+                    className="p-2.5 rounded-lg text-sm"
+                    style={{ backgroundColor: 'rgba(99,102,241,.15)', border: `1px solid rgba(99,102,241,.3)` }}
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-blue-400">A</span>
+                        <span className="text-xs font-semibold" style={{ color: 'var(--accent)' }}>A</span>
                         {r.isStreaming && (
-                          <span className="text-xs text-slate-500 animate-pulse">生成中...</span>
+                          <span className="text-xs animate-pulse" style={{ color: 'var(--text-muted)' }}>生成中...</span>
                         )}
                       </div>
                       <div className="flex items-center gap-1">
                         <button 
                           onClick={() => handleCopyResponse(r.answer)}
-                          className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded text-slate-300"
-                          title="コピー (⌘+Return)"
+                          className="btn-icon"
+                          title="コピー"
                         >
-                          📋 コピー
+                          📋
                         </button>
                         <button 
                           onClick={handleRegenerate}
-                          className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded text-slate-300"
-                          title="再生成 (⌘+R)"
+                          className="btn-icon"
+                          title="再生成"
                         >
-                          🔄 再生成
+                          🔄
                         </button>
                         <button 
-                          className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded text-slate-300"
+                          className="btn-icon"
                           title="展開"
                         >
-                          ⬆️ 展開
+                          ⬆️
                         </button>
                       </div>
                     </div>
-                    <p className="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
+                    <p style={{ color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
                       {r.answer}
                       {r.isStreaming && <span className="animate-pulse">▌</span>}
                     </p>
@@ -444,45 +501,103 @@ export default function MainOverlay({ onNavigate }: MainOverlayProps) {
         </div>
       </div>
 
-      {/* Footer Bar (32px) */}
-      <div className="h-8 border-t border-white/10 px-4 flex items-center justify-between bg-slate-800/50">
-        <div className="flex items-center gap-4 text-xs text-slate-500">
-          <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-xs">⌘+Shift+H</kbd>
-            <span>表示/非表示</span>
-          </span>
-          <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-xs">⌘+Return</kbd>
-            <span>コピー</span>
-          </span>
-          <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-xs">⌘+R</kbd>
-            <span>再生成</span>
-          </span>
+      {/* Status Bar */}
+      <div 
+        className="h-7 px-3 flex items-center justify-between border-t text-xs"
+        style={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border)', color: 'var(--text-muted)' }}
+      >
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <span 
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: isRecording ? 'var(--red)' : 'var(--green)', animation: isRecording ? 'pulse 1.4s infinite' : 'none' }}
+            />
+            <span>{isRecording ? '録音中' : '待機中'}</span>
+          </div>
+          
+          {isRecording && (
+            <div className="waveform">
+              <span style={{ animationDelay: '0s' }}></span>
+              <span style={{ animationDelay: '0.1s' }}></span>
+              <span style={{ animationDelay: '0.2s' }}></span>
+              <span style={{ animationDelay: '0.15s' }}></span>
+              <span style={{ animationDelay: '0.05s' }}></span>
+              <span style={{ animationDelay: '0.25s' }}></span>
+              <span style={{ animationDelay: '0.08s' }}></span>
+            </div>
+          )}
+          
+          <span>Deepgram Nova-2</span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span>モード: {MODES.find(m => m.id === mode)?.label}</span>
+        
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1">
+            <kbd className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-card)', border: `1px solid var(--border)` }}>⌘</kbd>
+            <kbd className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-card)', border: `1px solid var(--border)` }}>Shift</kbd>
+            <kbd className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-card)', border: `1px solid var(--border)` }}>H</kbd>
+            <span>非表示</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-card)', border: `1px solid var(--border)` }}>⌘</kbd>
+            <kbd className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-card)', border: `1px solid var(--border)` }}>M</kbd>
+            <span>モード切替</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-card)', border: `1px solid var(--border)` }}>⌘</kbd>
+            <kbd className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: 'var(--bg-card)', border: `1px solid var(--border)` }}>,</kbd>
+            <span>設定</span>
+          </span>
         </div>
       </div>
 
-      {/* Input Bar */}
-      <div className="h-14 border-t border-white/10 px-4 flex items-center gap-2 bg-slate-800/80">
-        <input
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="質問を入力... (Enterで送信)"
-          className="flex-1 bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
-        />
-        <button 
-          onClick={handleSend} 
-          disabled={!inputText.trim()}
-          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+      {/* Input Bar - Hidden in mini mode */}
+      {displayMode !== 'mini' && (
+        <div 
+          className="h-14 px-3 flex items-center gap-2 border-t"
+          style={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border)' }}
         >
-          送信
-        </button>
-      </div>
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="質問を入力... (Enterで送信)"
+            className="flex-1 px-4 py-2 rounded-lg text-sm"
+            style={{ 
+              backgroundColor: 'var(--bg-input)', 
+              border: `1px solid var(--border)`,
+              color: 'var(--text-primary)',
+              outline: 'none'
+            }}
+          />
+          <button 
+            onClick={handleSend} 
+            disabled={!inputText.trim()}
+            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            送信
+          </button>
+        </div>
+      )}
+
+      {/* Mini mode summary */}
+      {displayMode === 'mini' && lastAIResponse && (
+        <div 
+          className="h-12 px-3 flex items-center justify-between border-t"
+          style={{ backgroundColor: 'var(--bg-panel)', borderColor: 'var(--border)' }}
+        >
+          <div className="flex-1 overflow-hidden">
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>A:</span>
+            <span className="text-xs ml-1" style={{ color: 'var(--text-primary)' }}>
+              {lastAIResponse.answer.slice(0, 60)}{lastAIResponse.answer.length > 60 ? '...' : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => handleCopyResponse(lastAIResponse.answer)} className="btn-icon" title="コピー">📋</button>
+            <button onClick={handleRegenerate} className="btn-icon" title="再生成">🔄</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
